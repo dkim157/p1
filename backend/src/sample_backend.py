@@ -12,13 +12,23 @@ def hello_world():
 def get_users():
    if request.method == 'GET':
       search_username = request.args.get('name')
-      if search_username :
-         subdict = {'users_list' : []}
+      search_job = request.args.get('job')
+      subdict = {'users_list' : []}
+
+      if search_username and search_job:
+         for user in users['users_list']:
+            if (user['name'] == search_username) and (user['job'] == search_job):
+               subdict['users_list'].append(user)
+         return subdict
+
+      elif search_username :
          for user in users['users_list']:
             if user['name'] == search_username:
                subdict['users_list'].append(user)
          return subdict
+         
       return users
+      
    elif request.method == 'POST':
       userToAdd = request.get_json()
       users['users_list'].append(userToAdd)
@@ -39,16 +49,6 @@ def get_user(id):
         if user['id'] == id:
            return user
       return ({})
-   return users
-
-@app.route('/users/<name>/<job>')
-def search_users(name, job):
-   if name and job :
-      subdict = {'users_list' : []}
-      for user in users['users_list']:
-        if (user['name'] == name) and (user['job'] == job):
-           subdict['users_list'].append(user)
-      return subdict
    return users
 
 users = { 

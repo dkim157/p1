@@ -15,11 +15,26 @@ function MyApp() {
   }, [] );
 
   function removeOneCharacter (index) {
+    makeDel(characters[index]);
+
     const updated = characters.filter((character, i) => {
-        return i !== index
-      });
-      setCharacters(updated);
+      return i !== index
+    });
+    setCharacters(updated);
   }
+
+  async function makeDel(userToDelete){
+    try {      
+      const response = await axios.delete('http://localhost:5000/users', {data: userToDelete});
+      return response;
+    }
+    catch (error){
+      //We're not handling errors. Just logging into the console.
+      console.log(error); 
+      return false;         
+    }
+  }
+  
 
   async function fetchAll(){
     try {
@@ -36,14 +51,13 @@ function MyApp() {
  function updateList(person) { 
   makePostCall(person).then( result => {
   if (result)
-     setCharacters([...characters, person] );
+     setCharacters([...characters, result] );
   });
 }
 
  async function makePostCall(person){
     try {
      const response = await axios.post('http://localhost:5000/users', person);
-     console.log(response.data)
      return response.data; 
     }
     catch (error) {

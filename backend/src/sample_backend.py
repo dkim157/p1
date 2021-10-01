@@ -42,8 +42,11 @@ def get_users():
 
    elif request.method == 'DELETE':
       userToDelete = request.get_json()
-      users['users_list'].remove(userToDelete)
+      for user in users['users_list']:
+         if user['id'] == userToDelete["id"]:
+            users['users_list'].remove(userToDelete)
       resp = jsonify(success=True)
+      resp.status_code = 204
       return resp
 
 @app.route('/users/<id>')

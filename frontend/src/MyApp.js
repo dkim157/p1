@@ -50,7 +50,7 @@ function MyApp() {
      return false;
     }
   }
-  
+
   return (
     <div className="container">
       <Table characterData={characters} removeCharacter={removeOneCharacter} />

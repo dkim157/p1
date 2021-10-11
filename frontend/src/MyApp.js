@@ -25,7 +25,7 @@ function MyApp() {
 
   async function makeDel(userToDelete){
     try {      
-      const response = await axios.delete('http://localhost:5000/users', {data: userToDelete});
+      const response = await axios.delete('http://localhost:5000/users/'+userToDelete['_id']);
       return response;
     }
     catch (error){
@@ -39,6 +39,7 @@ function MyApp() {
   async function fetchAll(){
     try {
        const response = await axios.get('http://localhost:5000/users');
+       console.log(response)
        return response.data.users_list;
     }
     catch (error){

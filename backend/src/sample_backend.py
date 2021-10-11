@@ -1,109 +1,103 @@
-from flask_pymongo import PyMongo
-from pymongo import MongoClient
-from bson.json_util import dumps
-from flask import Flask, render_template, request, jsonify
-from flask_cors import CORS
-from random import randint
+from flask import Flask
+from flask import request
+from flask import jsonify
 import json
-import random
-import string
+# for linking frontend-backend
+from flask_cors import CORS
+
+# for random ids
+# import random
+# import string
+
+# for mongo db
+from model_mongodb import User
 
 
 app = Flask(__name__)
+# CORS stands for Cross Origin Requests.
+# Here we'll allow requests coming from any domain. Not recommended for production environment.
+CORS(app)
 
-users = { 
-   'users_list' :
-   [
-      { 
-         'id' : 'xyz789',
-         'name' : 'Charlie',
-         'job': 'Janitor',
-      },
-      {
-         'id' : 'abc123', 
-         'name': 'Mac',
-         'job': 'Bouncer',
-      },
-      {
-         'id' : 'ppp222', 
-         'name': 'Mac',
-         'job': 'Professor',
-      }, 
-      {
-         'id' : 'yat999', 
-         'name': 'Dee',
-         'job': 'Aspring actress',
-      },
-      {
-         'id' : 'zap555', 
-         'name': 'Dennis',
-         'job': 'Bartender',
-      }
-   ]
+users = {
+    'users_list': []
 }
 
-#client = pymongo.MongoClient("mongodb+srv://dkim:Picard2738@cluster0.t8smq.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-#db = client.users
-#users_list = db.users_list
-
-#connect and create a db named as mydb
-app.config["MONGO_URI"] = "mongodb://127.0.0.1:27017/users"
-#initializing the client for mongodb
-mongo_cli = PyMongo(app)
-#creating the customer collection
-db = mongo_cli.db
-
-CORS(app)
 
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
 
-@app.route('/users', methods=['GET', 'POST', 'DELETE'])
+# def gen_random_id():
+#   random_id = ''.join([random.choice(string.ascii_letters
+#            + string.digits) for n in range(6)])
+#   print (random_id)
+#   return random_id
+
+
+@app.route('/users', methods=['GET', 'POST'])
 def get_users():
-   if request.method == 'GET':
-      search_username = request.args.get('name')
-      search_job = request.args.get('job')
-      subdict = {'users_list' : []}
-      if search_username and search_job:
-         find_by_user_and_job(search_username, search_job)
-      elif search_username :
-         for user in users['users_list']:
-            if user['name'] == search_username:
-               subdict['users_list'].append(user)
-         return subdict
-      else: 
-         #cursor = db.users_list.find({})
-         #list_cur = list(cursor)
-         #json_data = dumps(list_cur)
-         #subdict['users_list'] = json_data
-         return users
-      
-   elif request.method == 'POST':
-      userToAdd = request.get_json()
-      users['users_list'].append(userToAdd)
-      result = db.users_list.insert_one({"name":userToAdd.get("name"), "job":userToAdd.get("job")}) # insert user into database
-      userToAdd["id"] = str(result.inserted_id) # give id to fetched value
-      resp = jsonify(userToAdd)
-      resp.status_code = 201 #200 is the default code for a normal response
-      return resp
+    if request.method == 'GET':
+        search_username = request.args.get('name')
+        search_job = request.args.get('job')
+        if search_username and search_job:
+            users = User().find_by_name_and_job(search_username, search_job)
+        elif search_username:  # updated for db_access
+            users = User().find_by_name(search_username)
+        elif search_job:
+            users = User().find_by_job(search_job)
+        else:  # updated for db_access
+            users = User().find_all()
+        return {"users_list": users}
+    elif request.method == 'POST':
+        userToAdd = request.get_json()
+        # userToAdd['id'] = gen_random_id() # check for duplicate before appending.. todo
+        # users['users_list'].append(userToAdd)
+        # updated for db_access
+        # make DB request to add user
+        newUser = User(userToAdd)
+        newUser.save()
+        resp = jsonify(newUser), 201
+        return resp
 
-   elif request.method == 'DELETE':
-      userToDelete = request.get_json()
-      for user in users['users_list']:
-         if user['id'] == userToDelete["id"]:
-            users['users_list'].remove(userToDelete)
-      resp = jsonify(success=True)
-      resp.status_code = 204
-      return resp
 
-@app.route('/users/<id>')
+@app.route('/users/<id>', methods=['GET', 'DELETE'])
 def get_user(id):
-   if id :
-      for user in users['users_list']:
-        if user['id'] == id:
-           return user
-      return ({})
-   return users
+    if request.method == 'GET':
+       # update for db access
+        user = User({"_id": id})
+        if user.reload():
+            return user
+        else:
+            return jsonify({"error": "User not found"}), 404
+    elif request.method == 'DELETE':
+        user = User({"_id": id})
+        resp = user.remove()
+        if resp['n'] == 1:
+            resp = jsonify({}), 204
+            return resp
+        else:
+            return jsonify({"error": "User not found"}), 404
+            
+        #for user in users['users_list']:
+         #   if user['id'] == id:
+          #      users['users_list'].remove(user)
+                # 204 is the default code for a normal response, no other input returned
+           #     resp = jsonify({}), 204
+            #    return resp
+        #return jsonify({"error": "User not found"}), 404
 
-   
+
+def find_users_by_name_job(name, job):
+    subdict = {'users_list': []}
+    for user in users['users_list']:
+        if user['name'] == name and user['job'] == job:
+            subdict['users_list'].append(user)
+    return subdict
+
+
+def find_users_by_job(job):
+    subdict = {'users_list': []}
+    for user in users['users_list']:
+        if user['job'] == job:
+            subdict['users_list'].append(user)
+    return subdict
